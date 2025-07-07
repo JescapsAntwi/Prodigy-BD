@@ -179,7 +179,7 @@ const validateUserData = (userData) => {
 // Protect all user routes
 // app.use('/api/users', protect);
 
-// / Example of protected route with role-based access
+//  Example of protected route with role-based access
 // app.get('/api/users', authorize('admin'), async (req, res) => {
 //   // Your existing get all users code
 // });
