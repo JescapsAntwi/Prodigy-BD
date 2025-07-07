@@ -11,6 +11,7 @@ const user = require('./models/user')
 const app = express();
 
 //connect to mongodb 
+connectDB();
 
 // Middleware
 app.use(express.json()); // Parse JSON bodies
