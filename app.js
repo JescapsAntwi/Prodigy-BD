@@ -416,3 +416,67 @@ connectDB().then(() => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
 });
+
+
+
+
+// Get current user (cached)
+app.get('/api/users/me', protect, cache('user:me'), async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select('-password');
+      res.status(200).json({
+        success: true,
+        data: user
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Server error' 
+      });
+    }
+  });
+  
+  // Get all users (admin only, cached)
+  app.get(
+    '/api/admin/users', 
+    protect, 
+    authorize('admin'), 
+    cache('users:all'), 
+    async (req, res) => {
+      try {
+        const users = await User.find().select('-password');
+        res.status(200).json({
+          success: true,
+          count: users.length,
+          data: users
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ 
+          success: false,
+          message: 'Server error' 
+        });
+      }
+    }
+  );
+  
+  // Update user (clear cache after update)
+  app.put(
+    '/api/users/:id', 
+    protect, 
+    clearCache('user:*'), // Clear all user-related cache
+    async (req, res) => {
+      // Your existing update logic
+    }
+  );
+  
+  // Delete user (clear cache after delete)
+  app.delete(
+    '/api/users/:id', 
+    protect, 
+    clearCache('user:*'), // Clear all user-related cache
+    async (req, res) => {
+      // Your existing delete logic
+    }
+  );
