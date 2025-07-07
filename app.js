@@ -10,6 +10,8 @@ const user = require('./models/user')
 // Initialize express app
 const app = express();
 
+//connect to mongodb 
+
 // Middleware
 app.use(express.json()); // Parse JSON bodies
 app.use(cors()); // Enable CORS for all routes
