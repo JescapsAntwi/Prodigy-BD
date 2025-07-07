@@ -274,36 +274,40 @@ app.post('/api/auth/register', async (req, res) => {
   });
 
 // Get all users
-app.get('/api/users', async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.json(users);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get a single user by ID
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    res.json(user);
-  } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ 
-        error: 'Invalid user ID format' 
+// Example of a protected route
+app.get('/api/users/me', protect, async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select('-password');
+      res.status(200).json({
+        success: true,
+        data: user
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Server error' 
       });
     }
-    console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  });
+  
+  // Example of admin-only route
+  app.get('/api/admin/users', protect, authorize('admin'), async (req, res) => {
+    try {
+      const users = await User.find().select('-password');
+      res.status(200).json({
+        success: true,
+        count: users.length,
+        data: users
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Server error' 
+      });
+    }
+  });
 
 // Update a user
 app.put('/api/users/:id', async (req, res) => {
