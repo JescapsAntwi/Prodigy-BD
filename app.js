@@ -179,98 +179,99 @@ const validateUserData = (userData) => {
 // Routes
 
 // Create one or multiple users
-app.post('/api/users', async (req, res) => {
-  try {
-    if (Array.isArray(req.body)) {
-      // Bulk create users
-      const results = [];
-      const errors = [];
-      
-      for (let i = 0; i < req.body.length; i++) {
-        const userData = req.body[i];
-        const validationErrors = validateUserData(userData);
-        
-        if (validationErrors.length > 0) {
-          errors.push({
-            index: i,
-            errors: validationErrors
-          });
-          continue;
-        }
-        
-        try {
-          const user = new User(userData);
-          await user.save();
-          results.push(user);
-        } catch (error) {
-          if (error.code === 11000) { // Duplicate key error
-            errors.push({
-              index: i,
-              errors: [{
-                type: 'field',
-                value: userData.email,
-                msg: 'Email already exists',
-                path: 'email',
-                location: 'body'
-              }]
-            });
-          } else {
-            errors.push({
-              index: i,
-              errors: [{
-                type: 'error',
-                msg: error.message
-              }]
-            });
-          }
-        }
-      }
-      
-      if (errors.length > 0) {
-        return res.status(207).json({
-          message: 'Some users were not created',
-          created: results,
-          errors: errors
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
+app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { name, email, password, age } = req.body;
+  
+      // Check if user exists
+      let user = await User.findOne({ email });
+      if (user) {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists'
         });
       }
-      
-      return res.status(201).json({
-        message: 'All users created successfully',
-        users: results
+  
+      // Create user
+      user = await User.create({
+        name,
+        email,
+        password,
+        age,
+        role: email === 'admin@example.com' ? 'admin' : 'user' // For demo, first user is admin
       });
-      
-    } else {
-      // Single user creation
-      const validationErrors = validateUserData(req.body);
-      
-      if (validationErrors.length > 0) {
-        return res.status(400).json({ errors: validationErrors });
-      }
-      
-      try {
-        const user = new User(req.body);
-        await user.save();
-        return res.status(201).json(user);
-      } catch (error) {
-        if (error.code === 11000) {
-          return res.status(400).json({
-            errors: [{
-              type: 'field',
-              value: req.body.email,
-              msg: 'Email already exists',
-              path: 'email',
-              location: 'body'
-            }]
-          });
+  
+      // Create token
+      const token = user.generateAuthToken();
+  
+      res.status(201).json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
         }
-        throw error;
-      }
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Server error' 
+      });
     }
-  } catch (error) {
-    console.error('Error creating user(s):', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  });
+  
+  // @desc    Login user
+  // @route   POST /api/auth/login
+  // @access  Public
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+  
+      // Check if user exists
+      const user = await User.findOne({ email }).select('+password');
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+  
+      // Check password
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+  
+      // Create token
+      const token = user.generateAuthToken();
+  
+      res.status(200).json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Server error' 
+      });
+    }
+  });
 
 // Get all users
 app.get('/api/users', async (req, res) => {
