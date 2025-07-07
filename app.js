@@ -480,3 +480,18 @@ app.get('/api/users/me', protect, cache('user:me'), async (req, res) => {
       // Your existing delete logic
     }
   );
+
+  // Handle Redis connection
+redisClient.on('connect', () => {
+    console.log('Redis client connected');
+  });
+  
+  redisClient.on('error', (err) => {
+    console.error('Redis connection error:', err);
+  });
+  
+  // Add this to your error handling middleware
+  process.on('SIGINT', () => {
+    redisClient.quit();
+    process.exit();
+  });
