@@ -27,41 +27,62 @@ const connectDB = async () => {
 };
 
 // User Model
+// In app.js, update the userSchema:
 const userSchema = new mongoose.Schema({
-  _id: {
-    type: String,
-    default: () => uuidv4()
-  },
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    trim: true,
-    lowercase: true,
-    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  age: {
-    type: Number,
-    required: [true, 'Age is required'],
-    min: [1, 'Age must be at least 1'],
-    max: [120, 'Age must be less than or equal to 120']
-  }
-}, {
-  timestamps: true,
-  toJSON: {
-    transform: (doc, ret) => {
-      ret.id = ret._id;
-      delete ret._id;
-      delete ret.__v;
-      return ret;
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      trim: true,
+      lowercase: true,
+      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: 6,
+      select: false // Don't return password in queries
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    age: {
+      type: Number,
+      required: [true, 'Age is required'],
+      min: [1, 'Age must be at least 1'],
+      max: [120, 'Age must be less than or equal to 120']
     }
-  }
-});
+  }, {
+    timestamps: true
+  });
+  
+  // Hash password before saving
+  userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+  });
+  
+  // Method to compare password
+  userSchema.methods.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+  };
+  
+  // Method to generate JWT token
+  userSchema.methods.generateAuthToken = function() {
+    return jwt.sign(
+      { id: this._id, role: this.role },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: process.env.JWT_EXPIRE || '30d' }
+    );
+  };
 
 const User = mongoose.model('User', userSchema);
 
