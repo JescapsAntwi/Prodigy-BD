@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
+const connectDB = require('./config/database');
 const cors = require('cors');
 
 // Initialize express app
